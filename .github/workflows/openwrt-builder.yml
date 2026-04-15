@@ -394,6 +394,7 @@ jobs:
       - name: Load custom configuration
         run: |
           [[ -d "files" ]] && mv -f files openwrt/files
+          [[ -d "vermagic" ]] && mv -f vermagic openwrt
           [ -e patch ] && cp -rf patchs/*.patch openwrt
           [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
           chmod +x ${DIY_P2_SH}
