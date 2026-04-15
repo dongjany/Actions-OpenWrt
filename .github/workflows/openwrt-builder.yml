@@ -406,7 +406,7 @@ jobs:
         run: |
           cd openwrt/
           make defconfig
-          make download -j8
+          make download -j8 || make download -j1
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
 
@@ -439,7 +439,7 @@ jobs:
         run: |
           cd openwrt/
           echo -e "Compiling with $(nproc) threads"
-          make -j$(($(nproc) + 1)) V=s || make -j1 || make -j1 V=s
+          make -j$(($(nproc) + 1)) || make -j1 || make -j1 V=s
 
           echo -e "ccache statistics:"
           ccache -s 2>/dev/null
