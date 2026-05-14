@@ -74,10 +74,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger 24.10 build
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ github.token }}
-          event-type: Source_Code_Update
+          event-type: Source Code Update
           client-payload: '{"build_branch":"24.10"}'
 
   # 构建 25.12
@@ -87,10 +87,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger 25.12 build
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ github.token }}
-          event-type: Source_Code_Update
+          event-type: Source Code Update
           client-payload: '{"build_branch":"25.12"}'
 
   # 清理旧记录
