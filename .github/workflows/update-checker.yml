@@ -82,11 +82,13 @@ jobs:
             .hash_2512
           key: branch-hash-${{ github.sha }}
 
-  # 遍历分支触发编译
   trigger-build:
     needs: check
     if: ${{ needs.check.outputs.build_branches != '' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
     strategy:
       matrix:
         branch: ${{ fromJson(format('["{0}"]', join(needs.check.outputs.build_branches, '","'))) }}
@@ -101,7 +103,6 @@ jobs:
               "build_branch": "${{ matrix.branch }}"
             }
 
-      # 清理旧运行记录
       - name: Clean old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
