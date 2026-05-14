@@ -12,48 +12,63 @@
 
 name: Update Checker
 
-env:
-  REPO_URL: https://github.com/openwrt/openwrt
-  REPO_BRANCH: openwrt-24.10.5
-
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 5'
+    - cron: "0 0 * * *"
 
 jobs:
   check:
     runs-on: ubuntu-latest
-
+    outputs:
+      needs_build: ${{ steps.check_update.outputs.needs_build }}
     steps:
+      - name: Check 24.10 branch
+        id: check2410
+        run: |
+          git clone --depth 1 https://github.com/Lienol/openwrt -b 24.10 tmp2410
+          cd tmp2410
+          echo "hash2410=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Get Commit Hash
-      id: getHash
-      run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
-        echo "commitHash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      - name: Check 25.12 branch
+        id: check2512
+        run: |
+          git clone --depth 1 https://github.com/Lienol/openwrt -b 25.12 tmp2512
+          cd tmp2512
+          echo "hash2512=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Compare Commit Hash
-      id: cacheHash
-      uses: actions/cache@v3
-      with:
-        path: .commitHash
-        key: commitHash_${{ steps.getHash.outputs.commitHash }}
+      - name: Check cache and compare
+        id: cacheHash
+        uses: actions/cache@v3
+        with:
+          path: .last_hash
+          key: openwrt-last-hash
 
-    - name: Save New Commit Hash
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
+      - name: Determine if build is needed
+        id: check_update
+        run: |
+          OLD_HASHES=$(cat .last_hash 2>/dev/null || echo "")
+          NEW_HASHES="${{ steps.check2410.outputs.hash2410 }} ${{ steps.check2512.outputs.hash2512 }}"
+          
+          if [ "$OLD_HASHES" != "$NEW_HASHES" ]; then
+            echo "needs_build=true" >> $GITHUB_OUTPUT
+            echo "$NEW_HASHES" > .last_hash
+          else
+            echo "needs_build=false" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Trigger build
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@v2
-      with:
-        token: ${{ github.token }}
-        event-type: Source Code Update
+  trigger-build:
+    needs: check
+    if: needs.check.outputs.needs_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger OpenWrt build
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ github.token }}
+          event-type: Source_Code_Update
 
-    - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@v2
-      with:
-        retain_days: 0
-        keep_minimum_runs: 2
+      - name: Clean old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 3
