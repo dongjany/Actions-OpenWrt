@@ -76,11 +76,11 @@ jobs:
         $GITHUB_WORKSPACE/$DIY_P3_SH
 
     - name: SSH connection to Actions
-      uses: kiddin9/debugger-action@master
+      uses: mxschmitt/action-tmate@v3
       if: github.event_name == 'workflow_dispatch'
       with:
         web: false
-        timeout: 500
+        timeout-minutes: 8
 
     - name: Download package
       id: package
