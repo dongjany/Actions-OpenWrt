@@ -44,13 +44,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-    # 仅手动触发时开启 SSH
-    - name: SSH connection to Actions
-      uses: kiddin9/debugger-action@master
-      if: github.event_name == 'workflow_dispatch'
-      with:
-        ssh-delay: 7200
-
     - name: Clone source code
       working-directory: /workdir
       run: |
@@ -83,6 +76,11 @@ jobs:
         chmod +x $DIY_P3_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P3_SH
+
+    # 仅手动触发时开启 SSH
+    - name: SSH connection to Actions
+      uses: kiddin9/debugger-action@master
+      if: github.event_name == 'workflow_dispatch'
 
     - name: Download package
       id: package
