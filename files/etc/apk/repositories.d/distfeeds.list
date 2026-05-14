@@ -1,8 +1,0 @@
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/targets/armsr/armv8/packages/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/base/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/targets/armsr/armv8/kmods/6.12.79-1-d28a399cd301dc51d9d1af9a9cd1ce19/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/luci/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/packages/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/routing/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/telephony/packages.adb
-https://downloads.openwrt.org/releases/25.12-SNAPSHOT/packages/aarch64_generic/video/packages.adb
