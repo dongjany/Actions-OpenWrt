@@ -5,7 +5,6 @@ on:
     - cron: "0 0 * * *"
   workflow_dispatch:
 
-# 全局权限：解决 Resource not accessible by integration 最关键
 permissions:
   contents: write
   actions: write
@@ -19,88 +18,84 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 获取 24.10 最新 commit
-      - name: Get 24.10 hash
+      - name: Get 24.10 latest commit
         id: hash2410
         run: |
           git clone --depth 1 https://github.com/Lienol/openwrt -b 24.10 tmp
           echo "hash=$(cd tmp && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           rm -rf tmp
 
-      # 获取 25.12 最新 commit
-      - name: Get 25.12 hash
+      - name: Get 25.12 latest commit
         id: hash2512
         run: |
           git clone --depth 1 https://github.com/Lienol/openwrt -b 25.12 tmp
           echo "hash=$(cd tmp && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           rm -rf tmp
 
-      # 尝试读取缓存（第一次不存在也不会失败）
-      - name: Restore last hash cache
+      - name: Restore last commit cache
         uses: actions/cache/restore@v4
         with:
           path: .hash
           key: openwrt-hash
           fail-on-cache-miss: false
 
-      # 对比更新（第一次运行 = 直接触发构建）
-      - name: Check update
+      - name: Check update & compare commits
         id: check_update
         run: |
-          OLD=$(cat .hash 2>/dev/null || echo "")
-          NEW2410=${{ steps.hash2410.outputs.hash }}
-          NEW2512=${{ steps.hash2512.outputs.hash }}
+          OLD_HASH=$(cat .hash 2>/dev/null || echo "")
+          NEW_2410=${{ steps.hash2410.outputs.hash }}
+          NEW_2512=${{ steps.hash2512.outputs.hash }}
 
-          # 第一次运行 或 有更新 = 构建
-          if [ -z "$OLD" ] || [ "$NEW2410" != "$(echo $OLD | cut -d' ' -f1)" ]; then
+          # 判断 24.10 是否需要构建
+          if [ -z "$OLD_HASH" ] || [ "$NEW_2410" != "$(echo $OLD_HASH | cut -d' ' -f1)" ]; then
             echo "build_2410=true" >> "$GITHUB_OUTPUT"
           else
             echo "build_2410=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if [ -z "$OLD" ] || [ "$NEW2512" != "$(echo $OLD | cut -d' ' -f2)" ]; then
+          # 判断 25.12 是否需要构建
+          if [ -z "$OLD_HASH" ] || [ "$NEW_2512" != "$(echo $OLD_HASH | cut -d' ' -f2)" ]; then
             echo "build_2512=true" >> "$GITHUB_OUTPUT"
           else
             echo "build_2512=false" >> "$GITHUB_OUTPUT"
           fi
 
-          # 保存新哈希
-          echo "$NEW2410 $NEW2512" > .hash
+          # 保存最新 commit
+          echo "$NEW_2410 $NEW_2512" > .hash
 
-      # 保存缓存（第一次会创建）
-      - name: Save new hash cache
+      - name: Save new commit cache
         uses: actions/cache/save@v4
         with:
           path: .hash
           key: openwrt-hash
 
-  # 24.10 有更新就触发
+  # 24.10 分支自动构建
   build-2410:
     needs: check
     if: ${{ needs.check.outputs.build_2410 == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger build 24.10
+      - name: Trigger 24.10 build
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ github.token }}
           event-type: Source_Code_Update
           client-payload: '{"build_branch":"24.10"}'
 
-  # 25.12 有更新就触发
+  # 25.12 分支自动构建
   build-2512:
     needs: check
     if: ${{ needs.check.outputs.build_2512 == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger build 25.12
+      - name: Trigger 25.12 build
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ github.token }}
           event-type: Source_Code_Update
           client-payload: '{"build_branch":"25.12"}'
 
-  # 自动清理旧记录
+  # 自动清理旧工作流记录
   clean:
     needs: [build-2410, build-2512]
     if: always()
