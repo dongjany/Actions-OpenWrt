@@ -9,8 +9,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
-      needs_build: ${{ steps.check_update.outputs.needs_build }}
-      build_branch: ${{ steps.check_update.build_branch }}
+      build_branches: ${{ steps.check_update.outputs.build_branches }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,97 +18,90 @@ jobs:
         id: get2410
         run: |
           git clone --depth 1 https://github.com/Lienol/openwrt -b 24.10 tmp
-          cd tmp
-          echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          cd .. && rm -rf tmp
+          echo "hash=$(cd tmp && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          rm -rf tmp
 
       # 获取 25.12 最新 commit
       - name: Get 25.12 latest hash
         id: get2512
         run: |
           git clone --depth 1 https://github.com/Lienol/openwrt -b 25.12 tmp
-          cd tmp
-          echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          cd .. && rm -rf tmp
+          echo "hash=$(cd tmp && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          rm -rf tmp
 
-      # 恢复缓存（第一次没有也不会失败）
+      # 恢复缓存
       - name: Restore last hash cache
         uses: actions/cache/restore@v4
         with:
           path: |
             .hash_2410
             .hash_2512
-          key: openwrt-branch-hash-cache
+          key: branch-hash-${{ github.sha }}
+          restore-keys: |
+            branch-hash-
 
-      # 核心判断：第一次运行也能正常触发
+      # 核心判断：支持多分支
       - name: Check update and set output
         id: check_update
         run: |
           NEW_2410=${{ steps.get2410.outputs.hash }}
           NEW_2512=${{ steps.get2512.outputs.hash }}
-
-          # 第一次运行：缓存不存在，自动触发编译
-          OLD_2410=$(cat .hash_2410 2>/dev/null || echo "")
-          OLD_2512=$(cat .hash_2512 2>/dev/null || echo "")
+          OLD_2410=$(cat .hash_2410 2>/dev/null || true)
+          OLD_2512=$(cat .hash_2512 2>/dev/null || true)
 
           echo "OLD 24.10: $OLD_2410"
           echo "NEW 24.10: $NEW_2410"
           echo "OLD 25.12: $OLD_2512"
           echo "NEW 25.12: $NEW_2512"
 
-          NEED_BUILD="false"
-          BUILD_BRANCH=""
+          BUILD_BRANCHES=()
 
-          # 第一次运行：没有旧哈希 → 触发编译
-          if [ -z "$OLD_2410" ] && [ -z "$OLD_2512" ]; then
-            echo "✅ 首次运行，自动触发编译"
-            NEED_BUILD="true"
-            BUILD_BRANCH="24.10"
-          else
-            # 非首次：对比哈希是否变化
-            if [ "$NEW_2410" != "$OLD_2410" ]; then
-              NEED_BUILD="true"
-              BUILD_BRANCH="24.10"
-            fi
-            if [ "$NEW_2512" != "$OLD_2512" ]; then
-              NEED_BUILD="true"
-              BUILD_BRANCH="25.12"
-            fi
+          # 首次运行或有更新
+          if [ -z "$OLD_2410" ] || [ "$NEW_2410" != "$OLD_2410" ]; then
+            BUILD_BRANCHES+=("24.10")
+          fi
+
+          if [ -z "$OLD_2512" ] || [ "$NEW_2512" != "$OLD_2512" ]; then
+            BUILD_BRANCHES+=("25.12")
           fi
 
           # 保存新哈希
           echo "$NEW_2410" > .hash_2410
           echo "$NEW_2512" > .hash_2512
 
-          echo "needs_build=$NEED_BUILD" >> "$GITHUB_OUTPUT"
-          echo "build_branch=$BUILD_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "分支：$BUILD_BRANCH，是否构建：$NEED_BUILD"
+          # 输出 JSON 数组
+          echo "build_branches=${BUILD_BRANCHES[@]}" >> "$GITHUB_OUTPUT"
+          echo "需要构建的分支：${BUILD_BRANCHES[@]}"
 
-      # 保存到缓存
-      - name: Save new hash to cache
+      # 保存新缓存（key 每次变化，确保能更新）
+      - name: Save new hash
         uses: actions/cache/save@v4
         with:
           path: |
             .hash_2410
             .hash_2512
-          key: openwrt-branch-hash-cache
+          key: branch-hash-${{ github.sha }}
 
-  # 触发编译
+  # 遍历分支触发编译
   trigger-build:
     needs: check
-    if: needs.check.outputs.needs_build == 'true'
+    if: ${{ needs.check.outputs.build_branches != '' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch: ${{ fromJson(format('["{0}"]', join(needs.check.outputs.build_branches, '","'))) }}
     steps:
-      - name: Trigger build workflow
+      - name: Trigger build for ${{ matrix.branch }}
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ github.token }}
           event-type: Source_Code_Update
           client-payload: |
             {
-              "build_branch": "${{ needs.check.outputs.build_branch }}"
+              "build_branch": "${{ matrix.branch }}"
             }
 
+      # 清理旧运行记录
       - name: Clean old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
