@@ -1,5 +1,3 @@
-./scripts/feeds install -a 2> feeds_error.log && grep Makefile feeds_error.log | awk '{print $3}' | xargs rm -rf && ./scripts/feeds clean && ./scripts/feeds update -i && ./scripts/feeds install -a
-
 # Modify default theme
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci-light/Makefile
 
