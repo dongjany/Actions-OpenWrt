@@ -10,8 +10,8 @@ on:
         default: '24.10'
         type: choice
         options:
-          - 24.10
-          - 25.12
+          - "24.10"
+          - "25.12"
 
 env:
   REPO_URL: https://github.com/Lienol/openwrt
