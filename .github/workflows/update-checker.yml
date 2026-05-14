@@ -1,71 +1,114 @@
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-#
-# File: .github/workflows/update-checker.yml
-# Description: Source code update checker
-#
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
-
 name: Update Checker
 
 on:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
       needs_build: ${{ steps.check_update.outputs.needs_build }}
+      build_branch: ${{ steps.check_update.build_branch }}
     steps:
-      - name: Check 24.10 branch
-        id: check2410
-        run: |
-          git clone --depth 1 https://github.com/Lienol/openwrt -b 24.10 tmp2410
-          cd tmp2410
-          echo "hash2410=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
 
-      - name: Check 25.12 branch
-        id: check2512
+      # 获取 24.10 最新 commit
+      - name: Get 24.10 latest hash
+        id: get2410
         run: |
-          git clone --depth 1 https://github.com/Lienol/openwrt -b 25.12 tmp2512
-          cd tmp2512
-          echo "hash2512=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          git clone --depth 1 https://github.com/Lienol/openwrt -b 24.10 tmp
+          cd tmp
+          echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          cd .. && rm -rf tmp
 
-      - name: Check cache and compare
-        id: cacheHash
-        uses: actions/cache@v3
+      # 获取 25.12 最新 commit
+      - name: Get 25.12 latest hash
+        id: get2512
+        run: |
+          git clone --depth 1 https://github.com/Lienol/openwrt -b 25.12 tmp
+          cd tmp
+          echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          cd .. && rm -rf tmp
+
+      # 恢复缓存（第一次没有也不会失败）
+      - name: Restore last hash cache
+        uses: actions/cache/restore@v4
         with:
-          path: .last_hash
-          key: openwrt-last-hash
+          path: |
+            .hash_2410
+            .hash_2512
+          key: openwrt-branch-hash-cache
 
-      - name: Determine if build is needed
+      # 核心判断：第一次运行也能正常触发
+      - name: Check update and set output
         id: check_update
         run: |
-          OLD_HASHES=$(cat .last_hash 2>/dev/null || echo "")
-          NEW_HASHES="${{ steps.check2410.outputs.hash2410 }} ${{ steps.check2512.outputs.hash2512 }}"
-          
-          if [ "$OLD_HASHES" != "$NEW_HASHES" ]; then
-            echo "needs_build=true" >> $GITHUB_OUTPUT
-            echo "$NEW_HASHES" > .last_hash
+          NEW_2410=${{ steps.get2410.outputs.hash }}
+          NEW_2512=${{ steps.get2512.outputs.hash }}
+
+          # 第一次运行：缓存不存在，自动触发编译
+          OLD_2410=$(cat .hash_2410 2>/dev/null || echo "")
+          OLD_2512=$(cat .hash_2512 2>/dev/null || echo "")
+
+          echo "OLD 24.10: $OLD_2410"
+          echo "NEW 24.10: $NEW_2410"
+          echo "OLD 25.12: $OLD_2512"
+          echo "NEW 25.12: $NEW_2512"
+
+          NEED_BUILD="false"
+          BUILD_BRANCH=""
+
+          # 第一次运行：没有旧哈希 → 触发编译
+          if [ -z "$OLD_2410" ] && [ -z "$OLD_2512" ]; then
+            echo "✅ 首次运行，自动触发编译"
+            NEED_BUILD="true"
+            BUILD_BRANCH="24.10"
           else
-            echo "needs_build=false" >> $GITHUB_OUTPUT
+            # 非首次：对比哈希是否变化
+            if [ "$NEW_2410" != "$OLD_2410" ]; then
+              NEED_BUILD="true"
+              BUILD_BRANCH="24.10"
+            fi
+            if [ "$NEW_2512" != "$OLD_2512" ]; then
+              NEED_BUILD="true"
+              BUILD_BRANCH="25.12"
+            fi
           fi
 
+          # 保存新哈希
+          echo "$NEW_2410" > .hash_2410
+          echo "$NEW_2512" > .hash_2512
+
+          echo "needs_build=$NEED_BUILD" >> "$GITHUB_OUTPUT"
+          echo "build_branch=$BUILD_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "分支：$BUILD_BRANCH，是否构建：$NEED_BUILD"
+
+      # 保存到缓存
+      - name: Save new hash to cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .hash_2410
+            .hash_2512
+          key: openwrt-branch-hash-cache
+
+  # 触发编译
   trigger-build:
     needs: check
     if: needs.check.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger OpenWrt build
-        uses: peter-evans/repository-dispatch@v2
+      - name: Trigger build workflow
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ github.token }}
           event-type: Source_Code_Update
+          client-payload: |
+            {
+              "build_branch": "${{ needs.check.outputs.build_branch }}"
+            }
 
       - name: Clean old workflow runs
         uses: Mattraks/delete-workflow-runs@v2
