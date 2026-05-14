@@ -64,7 +64,6 @@ jobs:
 
     - name: Load custom configuration
       run: |
-        [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
@@ -75,6 +74,10 @@ jobs:
         chmod +x $DIY_P3_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P3_SH
+
+    - name: SSH connection to Actions
+      uses: kiddin9/debugger-action@master
+      if: github.event_name == 'workflow_dispatch'
 
     - name: Download package
       id: package
@@ -93,6 +96,15 @@ jobs:
         make -j$(nproc) || make -j1 || make -j1 V=s
         echo "status=success" >> $GITHUB_OUTPUT
 
+    # 打包 Amlogic S9xxx 镜像生成 img.gz
+    - name: Package OpenWrt for target boards
+      uses: ophub/amlogic-s9xxx-openwrt@main
+      with:
+        openwrt_path: openwrt/bin/targets/*/*/*rootfs.tar.gz
+        openwrt_ipaddr: dhcp
+        openwrt_board: s905d
+        openwrt_kernel: 6.12.y_6.18.y
+
     - name: Prepare release files
       id: prepare
       if: steps.compile.outputs.status == 'success'
@@ -100,6 +112,7 @@ jobs:
         mkdir -p release_files
         FIRMWARE_DIR=$(ls -d openwrt/bin/targets/*/*/)
         cp $FIRMWARE_DIR/*rootfs.tar.gz release_files/ 2>/dev/null
+        cp out/*.img.gz release_files/ 2>/dev/null
         cp openwrt/.config release_files/config
         echo "RELEASE_DIR=release_files" >> $GITHUB_ENV
 
@@ -113,8 +126,9 @@ jobs:
         draft: false
         prerelease: false
 
+    # 只保留最近 3 次运行记录
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@main
       with:
-        retain_days: 0
-        keep_minimum_runs: 2
+        retain_days: 30
+        keep_minimum_runs: 3
