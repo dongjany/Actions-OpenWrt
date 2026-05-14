@@ -46,30 +46,28 @@ jobs:
           NEW_2410=${{ steps.hash2410.outputs.hash }}
           NEW_2512=${{ steps.hash2512.outputs.hash }}
 
-          # 判断 24.10 是否需要构建
           if [ -z "$OLD_HASH" ] || [ "$NEW_2410" != "$(echo $OLD_HASH | cut -d' ' -f1)" ]; then
             echo "build_2410=true" >> "$GITHUB_OUTPUT"
           else
             echo "build_2410=false" >> "$GITHUB_OUTPUT"
           fi
 
-          # 判断 25.12 是否需要构建
           if [ -z "$OLD_HASH" ] || [ "$NEW_2512" != "$(echo $OLD_HASH | cut -d' ' -f2)" ]; then
             echo "build_2512=true" >> "$GITHUB_OUTPUT"
           else
             echo "build_2512=false" >> "$GITHUB_OUTPUT"
           fi
 
-          # 保存最新 commit
           echo "$NEW_2410 $NEW_2512" > .hash
 
+      # ✅ 修复点：只有缓存不存在时才保存，永远不报错
       - name: Save new commit cache
         uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: .hash
           key: openwrt-hash
 
-  # 24.10 分支自动构建
   build-2410:
     needs: check
     if: ${{ needs.check.outputs.build_2410 == 'true' }}
@@ -82,7 +80,6 @@ jobs:
           event-type: Source_Code_Update
           client-payload: '{"build_branch":"24.10"}'
 
-  # 25.12 分支自动构建
   build-2512:
     needs: check
     if: ${{ needs.check.outputs.build_2512 == 'true' }}
@@ -95,7 +92,6 @@ jobs:
           event-type: Source_Code_Update
           client-payload: '{"build_branch":"25.12"}'
 
-  # 自动清理旧工作流记录
   clean:
     needs: [build-2410, build-2512]
     if: always()
