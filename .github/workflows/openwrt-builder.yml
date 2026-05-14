@@ -15,7 +15,6 @@ on:
 
 env:
   REPO_URL: https://github.com/Lienol/openwrt
-  # 修复 24.10 变成 24.1 的问题
   REPO_BRANCH: ${{ github.event.client_payload.build_branch || format('{0}', github.event.inputs.branch) }}
   CONFIG_FILE: .config
   DIY_P1_SH: diy-part1.sh
@@ -113,10 +112,9 @@ jobs:
       if: steps.compile.outputs.status == 'success'
       run: |
         mkdir -p release_files
-        FIRMWARE_DIR=$(ls -d openwrt/bin/targets/*/*/)
-        cp $FIRMWARE_DIR/*rootfs.tar.gz release_files/ 2>/dev/null
-        cp out/*.img.gz release_files/ 2>/dev/null
-        cp openwrt/.config release_files/config
+        cp openwrt/bin/targets/armsr/armv8/*-rootfs.tar.gz release_files/ 2>/dev/null || true
+        cp out/*.img.gz release_files/ 2>/dev/null || true
+        cp openwrt/.config release_files/config 2>/dev/null || true
         echo "RELEASE_DIR=release_files" >> $GITHUB_ENV
 
     - name: Upload to Release
