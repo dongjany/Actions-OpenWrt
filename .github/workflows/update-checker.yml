@@ -12,9 +12,10 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # 👇 加上这句，消除权限/集成问题
+    permissions: write-all
 
     steps:
-
     - name: Get Commit Hash
       id: getHash
       run: |
@@ -23,7 +24,7 @@ jobs:
 
     - name: Compare Commit Hash
       id: cacheHash
-      uses: actions/cache@v3
+      uses: actions/cache@v6  # 升级到最新版，支持 Node24
       with:
         path: .commitHash
         key: commitHash_${{ steps.getHash.outputs.commitHash }}
@@ -35,7 +36,7 @@ jobs:
 
     - name: Trigger build
       if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@v2
+      uses: peter-evans/repository-dispatch@v3  # 升级到 v3，支持 Node24
       with:
         token: ${{ secrets.GH_TOKEN }}
         repository: ${{ github.repository }}
