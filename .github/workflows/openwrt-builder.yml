@@ -7,6 +7,8 @@ on:
       openwrt_ip: 192.168.2.15
 
 env:
+  REPO_URL: https://github.com/Lienol/openwrt
+  REPO_BRANCH: "24.10"
   CONFIG_FILE: config
   DIY_P1_SH: diy-part1.sh
   DIY_P2_SH: diy-part2.sh
@@ -75,17 +77,15 @@ jobs:
         working-directory: /builder
         if: ${{ steps.init.outputs.status == 'success' && !cancelled() }}
         run: |
-          REPO_URL="https://github.com/Lienol/openwrt"
-          REPO_NAME="openwrt"
-          REPO_BRANCH="24.10"
-
-          # Clone the source code repository
+         # Determine the OpenWrt source code repository
+         REPO_NAME="openwrt"
+         # Clone the source code repository
           git clone -q --single-branch --depth=1 --branch=${REPO_BRANCH} ${REPO_URL} openwrt
           ln -sf /builder/openwrt ${{ github.workspace }}/openwrt
           ln -sf /builder/openwrt /home/runner/work/_actions/ophub/amlogic-s9xxx-openwrt/main/openwrt
 
           # Export build metadata
-          echo "build_tag=${{ env.REPO_NAME }}-${{ env.REPO_BRANCH }}-$(date +"%Y.%m")" >> ${GITHUB_ENV}
+          echo "build_tag=${REPO_NAME}-${REPO_BRANCH}-$(date +"%Y.%m")" >> ${GITHUB_ENV}
           echo -e "REPO_URL: [ ${REPO_URL} ]\nREPO_BRANCH: [ ${REPO_BRANCH} ]\nREPO_NAME: [ ${REPO_NAME} ]"
           df -hT ${PWD}
           echo "REPO_URL=${REPO_URL}" >> ${GITHUB_ENV}
@@ -230,7 +230,7 @@ jobs:
             ### OpenWrt Image Information
             - Default IP: `192.168.2.15`
             - Default username: `root`
-            - Default password: ``
+            - Default password: `password`
             - Default WIFI name: `OpenWrt`
             - Default WIFI password: `none`
             ### Install to EMMC
