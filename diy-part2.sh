@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # OpenWrt 自动清理 defconfig 报错：Makefile错误、依赖缺失、递归依赖
 set -uo pipefail
 
