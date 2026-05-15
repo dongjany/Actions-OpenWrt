@@ -33,12 +33,13 @@ jobs:
       run: |
         echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
 
-    - name: Trigger build
+    - name: 触发编译
       if: steps.cacheHash.outputs.cache-hit != 'true'
       uses: peter-evans/repository-dispatch@v2
       with:
         token: ${{ github.token }}
-        event-type: Source Code Update
+        repository: ${{ github.repository }}
+        event-type: source-update
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
