@@ -5,6 +5,11 @@ on:
   workflow_dispatch:
       use_ccache: true
       openwrt_ip: 192.168.2.15
+      ssh:
+        description: '是否开启 SSH 连接'
+        required: true
+        default: 'false'
+        type: boolean
 
 env:
   REPO_URL: https://github.com/Lienol/openwrt
@@ -114,6 +119,13 @@ jobs:
           ${{ github.workspace }}/${DIY_P2_SH}
           ${{ github.workspace }}/${DIY_P3_SH} "${{ inputs.openwrt_ip }}" "${{ inputs.use_ccache }}"
 
+      - name: SSH connect to Actions
+        uses: P3TERX/ssh2actions@main
+        if: github.event.inputs.ssh == 'true'
+        with:
+          timeout: 300
+          web: false
+      
       - name: Download package
         id: package
         run: |
