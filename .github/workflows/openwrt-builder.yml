@@ -1,5 +1,7 @@
 name: OpenWrt Builder
 
+permissions: write-all
+
 on:
   repository_dispatch:
   workflow_dispatch:
@@ -13,9 +15,6 @@ on:
       ssh:
         default: 'false'
         type: boolean
-
-permissions:
-  contents: write
   
 env:
   REPO_URL: https://github.com/Lienol/openwrt
