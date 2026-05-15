@@ -203,12 +203,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package OpenWrt for target boards
-        id: pack1
         if: ${{ steps.clean.outputs.status == 'success' && !cancelled() }}
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
           openwrt_path: openwrt/output/*rootfs.tar.gz
-          openwrt_ip: 192.168.2.15
+          openwrt_ip: ${{ inputs.openwrt_ip }}
           openwrt_board: s905d
           openwrt_kernel: 6.12.y
           auto_kernel: true
@@ -217,14 +216,12 @@ jobs:
           builder_name: ophub
 
       - name: Backup ophub packaged firmware
-        if: ${{ steps.pack1.outputs.status == 'success' && !cancelled() }}
         run: |
           mkdir -p upload_firmware
           cp -rf ${{ env.PACKAGED_OUTPUTPATH }}/* upload_firmware/
+          rm -rf ${{ env.PACKAGED_OUTPUTPATH }}/*
 
       - name: Package OpenWrt Firmware
-        id: pack2
-        if: ${{ steps.clean.outputs.status == 'success' && !cancelled() }}
         uses: unifreq/openwrt_packit@master
         env:
           OPENWRT_ARMSR: openwrt/output/*rootfs.tar.gz
@@ -232,19 +229,17 @@ jobs:
           KERNEL_REPO_URL: ophub/kernel
           KERNEL_VERSION_NAME: 6.12.y
           KERNEL_AUTO_LATEST: true
-          OPENWRT_IP: 192.168.2.15
+          OPENWRT_IP: ${{ inputs.openwrt_ip }}
           CUSTOMIZE_RK3399: none
           SCRIPT_DIY_PATH:
           WHOAMI: ophub
 
       - name: Merge unifreq packaged firmware
-        if: ${{ steps.pack2.outputs.status == 'success' && !cancelled() }}
         run: |
           cp -rf ${{ env.PACKAGED_OUTPUTPATH }}/* upload_firmware/
 
       - name: Upload packaged OpenWrt to Release
         uses: ncipollo/release-action@main
-        if: ${{ (steps.pack1.outputs.status == 'success' || steps.pack2.outputs.status == 'success') && !cancelled() }}
         with:
           tag: ${{ env.build_tag }}
           artifacts: upload_firmware/*
@@ -255,7 +250,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             ### OpenWrt Image Information
-            - Default IP: `192.168.2.15`
+            - Default IP: `${{ inputs.openwrt_ip }}`
             - Default username: `root`
             - Default password: `password`
             - Default WIFI name: `OpenWrt`
