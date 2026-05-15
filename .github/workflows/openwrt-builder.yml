@@ -203,6 +203,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package OpenWrt for target boards
+        id: pack1
         if: ${{ steps.clean.outputs.status == 'success' && !cancelled() }}
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
@@ -215,9 +216,16 @@ jobs:
           kernel_usage: stable
           builder_name: ophub
 
+      - name: Backup ophub packaged firmware
+        if: ${{ steps.pack1.outputs.status == 'success' && !cancelled() }}
+        run: |
+          mkdir -p upload_firmware
+          cp -rf ${{ env.PACKAGED_OUTPUTPATH }}/* upload_firmware/
+
       - name: Package OpenWrt Firmware
-        uses: unifreq/openwrt_packit@master
+        id: pack2
         if: ${{ steps.clean.outputs.status == 'success' && !cancelled() }}
+        uses: unifreq/openwrt_packit@master
         env:
           OPENWRT_ARMSR: openwrt/output/*rootfs.tar.gz
           PACKAGE_SOC: s905d
@@ -226,15 +234,20 @@ jobs:
           KERNEL_AUTO_LATEST: true
           OPENWRT_IP: 192.168.2.15
           CUSTOMIZE_RK3399: none
-          SCRIPT_DIY_PATH: 
+          SCRIPT_DIY_PATH:
           WHOAMI: ophub
+
+      - name: Merge unifreq packaged firmware
+        if: ${{ steps.pack2.outputs.status == 'success' && !cancelled() }}
+        run: |
+          cp -rf ${{ env.PACKAGED_OUTPUTPATH }}/* upload_firmware/
 
       - name: Upload packaged OpenWrt to Release
         uses: ncipollo/release-action@main
-        if: ${{ env.PACKAGED_STATUS == 'success' && !cancelled() }}
+        if: ${{ (steps.pack1.outputs.status == 'success' || steps.pack2.outputs.status == 'success') && !cancelled() }}
         with:
           tag: ${{ env.build_tag }}
-          artifacts: ${{ env.PACKAGED_OUTPUTPATH }}/*
+          artifacts: upload_firmware/*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
