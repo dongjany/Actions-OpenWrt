@@ -1,7 +1,5 @@
 #!/bin/bash
-
-# OpenWrt 三合一脚本：自动去重lienol/kiddin9 + 自动修复defconfig报错
-set -uo pipefail
+set -e
 
 # ===================== 第一部分：自动删除 lienol 与 kiddin9 重复包 =====================
 FEED_LIENOL="feeds/lienol"
@@ -30,59 +28,51 @@ else
     echo "⚠️  未找到 lienol 或 kiddin9 源，跳过去重"
 fi
 
-# ===================== 第二部分：自动修复 defconfig 报错 =====================
-LOG="build_error.log"
+# ===================== 第二部分：自动删除 defconfig 报错的软件包（删源码） =====================
+LOG="del_error.log"
 rm -f $LOG
 
-echo -e "\n====================================="
-echo "  第二步：自动修复 defconfig 报错"
-echo "====================================="
+echo -e "\n========================================"
+echo "  第二步：自动删除 defconfig 报错包（删目录）"
+echo "  作用：直接删除 package/feeds/ 下坏包"
+echo "========================================"
 
 while true; do
-    echo -e "\n==> 执行 make defconfig..."
+    echo -e "\n→ 执行 make defconfig..."
     make defconfig > $LOG 2>&1
 
     if grep -q "configuration written to .config" $LOG; then
-        echo -e "\n✅ defconfig 执行成功！"
+        echo -e "\n✅ defconfig 成功！无错误包需要删除"
         break
     fi
 
-    echo -e "\n❌ 检测到错误，开始清理..."
+    echo -e "\n❌ 发现错误，开始提取要删除的包路径..."
 
-    # 规则1：清理 Makefile 错误
-    BAD_PACKAGES=$(grep -E "ERROR: please fix package/" $LOG | \
-        sed -E 's#.*package/(.*/)?([^/]+)/Makefile.*#\2#' | sort -u)
+    # 提取所有报错的包路径（精准匹配你日志）
+    BAD_PATHS=$(grep -E "package/feeds/|package/public/|package/wwan/" $LOG | \
+        grep -E "Makefile" | \
+        sed -E 's/.*(package\/.*\/[^/]+)\/Makefile.*/\1/' | \
+        sort -u)
 
-    # 规则2：清理依赖缺失
-    BAD_PACKAGES+=$(grep -E "has a dependency on.*does not exist" $LOG | \
-        sed -E 's/.* ([^ ]+)\/Makefile.*/\1/' | sort -u)
-
-    # 规则3：清理递归依赖
-    BAD_PACKAGES+=$(grep -A5 "recursive dependency detected" $LOG | \
-        grep -E "symbol PACKAGE_" | \
-        sed -E 's/.*PACKAGE_([^ ]+).*/\1/' | sort -u)
-
-    # 去重
-    BAD_PACKAGES=$(echo "$BAD_PACKAGES" | tr ' ' '\n' | sort -u | grep -v '^$')
-
-    if [ -z "$BAD_PACKAGES" ]; then
-        echo -e "\n⚠️  无法识别错误，查看日志：$LOG"
+    if [ -z "$BAD_PATHS" ]; then
+        echo -e "\n⚠️  未找到可删除的包，错误日志："
         cat $LOG
         exit 1
     fi
 
-    echo -e "\n🛑 将要禁用的坏包："
-    echo "$BAD_PACKAGES"
+    echo -e "\n🗑️  即将删除以下报错软件包目录："
+    echo "$BAD_PATHS"
 
-    # 批量禁用
-    for pkg in $BAD_PACKAGES; do
-        sed -i "/CONFIG_PACKAGE_${pkg}=y/c\\# CONFIG_PACKAGE_${pkg} is not set" .config 2>/dev/null
-        sed -i "/CONFIG_PACKAGE_${pkg}=m/c\\# CONFIG_PACKAGE_${pkg} is not set" .config 2>/dev/null
-        sed -i "/CONFIG_${pkg}=y/c\\# CONFIG_${pkg} is not set" .config 2>/dev/null
+    # 直接删除！
+    for path in $BAD_PATHS; do
+        if [ -d "$path" ] || [ -f "$path/Makefile" ]; then
+            echo "删除：$path"
+            rm -rf "$path"
+        fi
     done
 
-    echo -e "\n🔧 已禁用，重新尝试..."
+    echo -e "\n🔄 删除完成，重新测试 defconfig..."
 done
 
 echo -e "\n🎉🎉🎉 全部完成！"
-echo "现在可以执行：make menuconfig 或 make -j$(nproc)"
+echo "现在可以直接编译：make menuconfig || make -j$(nproc)"
