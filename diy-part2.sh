@@ -25,6 +25,9 @@ git clone https://github.com/sbwml/luci-app-ramfree.git package/luci-app-ramfree
 
 # ========== Git 下载仓库 → 移动 → 删除 ==========
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-turboacc
+git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon
+git_clone_move main https://github.com/kiddin9/op-packages luci-app-xunlei
+git_clone_move main https://github.com/kiddin9/op-packages luci-app-fan
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_aliyun
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_dnspod
 
