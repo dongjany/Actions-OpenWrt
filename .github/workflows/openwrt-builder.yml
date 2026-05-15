@@ -3,12 +3,14 @@ name: OpenWrt Builder
 on:
   repository_dispatch:
   workflow_dispatch:
-    inputs: 
-      use_ccache: true
-      openwrt_ip: 192.168.2.15
+    inputs:
+      use_ccache:
+        default: 'true'
+        type: boolean
+      openwrt_ip:
+        default: '192.168.2.15'
+        type: string
       ssh:
-        description: '是否开启 SSH 连接'
-        required: true
         default: 'false'
         type: boolean
 
