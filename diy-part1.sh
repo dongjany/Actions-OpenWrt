@@ -1,21 +1,10 @@
 #!/bin/sh
 
-# 1. 自动检测 OpenWrt 分支
-if grep -q "24.10" version.openwrt 2>/dev/null || grep -q "24.10" .git/config 2>/dev/null; then
+# 1. OpenWrt 分支
     REPO_BRANCH="24.10"
-else
-    REPO_BRANCH="25.12"
-fi
 
-# 2. 自动检测内核主版本 6.6 / 6.12
-if ls include/kernel-6.6* 1>/dev/null 2>&1; then
+# 2. 内核主版本 6.6 
     KERNEL_MAJOR="6.6"
-elif ls target/linux/generic/kernel-6.12* 1>/dev/null 2>&1; then
-    KERNEL_MAJOR="6.12"
-else
-    echo "无法识别内核版本"
-    exit 1
-fi
 
 # 3. 拼接官方 kmods 基础 URL（armsr/armv8）
 BASE_URL="https://downloads.openwrt.org/releases/$REPO_BRANCH-SNAPSHOT/targets/armsr/armv8/kmods/"
