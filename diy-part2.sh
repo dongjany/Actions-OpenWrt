@@ -28,6 +28,8 @@ git_clone_move main https://github.com/kiddin9/op-packages luci-app-turboacc
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-xunlei
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-fan
+git_clone_move main https://github.com/kiddin9/op-packages mosdns
+git_clone_move main https://github.com/kiddin9/op-packages luci-app-mosdns
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-broadbandacc
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_aliyun
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_dnspod
