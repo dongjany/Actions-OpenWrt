@@ -28,9 +28,9 @@ git clone https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 git clone https://github.com/sbwml/luci-app-ramfree.git package/luci-app-ramfree
 
 # ========== 一次克隆 → 移动多个目录 ==========
-git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-app-xunlei luci-app-fan v2dat mosdns luci-app-mosdns luci-app-broadbandacc autocore automount luci-app-partexp luci-app-samba4
+git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-app-xunlei luci-app-fan v2dat mosdns luci-app-mosdns luci-app-broadbandacc luci-app-partexp luci-app-samba4
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_aliyun other/lean/ddns-scripts_dnspod
-git_clone_move openwrt-24.10 https://github.com/immortalwrt/immortalwrt package/emortal/default-settings
+git_clone_move openwrt-24.10 https://github.com/immortalwrt/immortalwrt package/emortal/default-settings package/emortal/automount package/emortal/autocore
 
 # ========== 添加luci-app-turboacc插件 ==========
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
