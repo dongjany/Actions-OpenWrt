@@ -28,7 +28,7 @@ git clone https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 git clone https://github.com/sbwml/luci-app-ramfree.git package/luci-app-ramfree
 
 # ========== 一次克隆 → 移动多个目录 ==========
-git_clone_move main https://github.com/kiddin9/op-packages luci-app-turboacc luci-app-demon luci-app-xunlei luci-app-fan v2dat mosdns luci-app-mosdns luci-app-broadbandacc autocore automount luci-app-partexp
+git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-app-xunlei luci-app-fan v2dat mosdns luci-app-mosdns luci-app-broadbandacc autocore automount luci-app-partexp
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_aliyun other/lean/ddns-scripts_dnspod
 
 echo "\n✅ 所有插件下载完成！已全部放入 package 目录"
