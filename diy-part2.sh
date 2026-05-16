@@ -32,8 +32,16 @@ git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-a
 git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-scripts_aliyun other/lean/ddns-scripts_dnspod
 git_clone_move openwrt-24.10 https://github.com/immortalwrt/immortalwrt package/emortal/default-settings package/emortal/automount package/emortal/autocore
 
-# ========== 添加luci-app-turboacc插件 ==========
+# ========== 删除错误插件 ==========
+rm -rf package/public/autosamba
+rm -rf package/feeds/packages/onionshare-cli
+rm -rf package/feeds/packages/python-pika
+rm -rf package/feeds/packages/python-ubus
+rm -rf package/wwan/qmodem/application/qmodem
 rm -rf package/network/utils/fullconenat-nft
+rm -rf package/feeds/packages/zabbix
+
+# ========== 添加luci-app-turboacc插件 ==========
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh
 sed -i 's|rm -rf "$file_path"|# 保留原有补丁，不删除|g' add_turboacc.sh
 bash add_turboacc.sh
