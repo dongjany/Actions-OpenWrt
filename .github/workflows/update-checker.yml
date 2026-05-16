@@ -1,50 +1,59 @@
 name: Update Checker
 
-# 👇 强制启用 Node.js 24，消除所有弃用警告
+# 全局环境变量
 env:
+  # 强制使用 Node.js 24 消除弃用警告
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # OpenWrt 源码仓库与分支
   REPO_URL: https://github.com/Lienol/openwrt
   REPO_BRANCH: "24.10"
 
+# 触发条件：手动运行 + 每周五 00:00 (UTC) 自动检查
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 5'
+    - cron: "0 0 * * 5"
 
+# 任务：源码更新检测
 jobs:
   check:
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions:
+      contents: write  # 最小权限原则，替换 write-all
 
     steps:
-    - name: Get Commit Hash
-      id: getHash
-      run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
-        echo "commitHash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      # 1. 获取源码最新 Commit Hash
+      - name: Get latest commit hash
+        id: getHash
+        run: |
+          git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
+          echo "commitHash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Compare Commit Hash
-      id: cacheHash
-      uses: actions/cache@v4
-      with:
-        path: .commitHash
-        key: commitHash_${{ steps.getHash.outputs.commitHash }}
+      # 2. 使用缓存对比是否为新提交
+      - name: Compare commit hash with cache
+        id: cacheHash
+        uses: actions/cache@v4
+        with:
+          path: .commitHash
+          key: commitHash_${{ steps.getHash.outputs.commitHash }}
 
-    - name: Save New Commit Hash
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
+      # 3. 无缓存命中 → 保存新 Hash
+      - name: Save new commit hash
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        run: echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
 
-    - name: Trigger build
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@v3
-      with:
-        token: ${{ secrets.GH_TOKEN }}
-        repository: ${{ github.repository }}
-        event-type: source-update
+      # 4. 检测到更新 → 触发编译工作流
+      - name: Trigger build workflow on source update
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          repository: ${{ github.repository }}
+          event-type: source-update
 
-    - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@v2
-      with:
-        retain_days: 0
-        keep_minimum_runs: 3
+      # 5. 自动清理旧的运行记录
+      - name: Clean up old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 3
