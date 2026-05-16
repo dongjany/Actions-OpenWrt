@@ -15,7 +15,7 @@ on:
       ssh:
         default: 'false'
         type: boolean
-  
+
 env:
   REPO_URL: https://github.com/Lienol/openwrt
   REPO_BRANCH: "24.10"
@@ -23,7 +23,7 @@ env:
   DIY_P1_SH: diy-part1.sh
   DIY_P2_SH: diy-part2.sh
   DIY_P3_SH: diy-part3.sh
-  TZ: Etc/UTC
+  TZ: Asia/Shanghai          # 北京时间
   CCACHE_DIR: /builder/openwrt/.ccache
 
 jobs:
@@ -36,6 +36,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Set timezone to Asia/Shanghai
+        run: |
+          sudo timedatectl set-timezone Asia/Shanghai
+          echo "TZ=Asia/Shanghai" >> $GITHUB_ENV
+          date
 
       - name: Initialize the build environment
         id: init
@@ -51,16 +57,14 @@ jobs:
           sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
           sudo -E apt-get -y install $(curl -fsSL https://ophub.org/ubuntu2404-make-openwrt-depends)
           sudo -E systemctl daemon-reload
-          #sudo -E apt-get -y full-upgrade
           sudo -E apt-get -y autoremove --purge
           sudo -E apt-get clean
           sudo sed -i '/NVM_DIR/d;/skel/d' /root/{.bashrc,.profile}
           sudo rm -rf ~/{.cargo,.dotnet,.rustup}
-          sudo -E timedatectl set-timezone "${TZ:-Etc/UTC}"
+          sudo -E timedatectl set-timezone Asia/Shanghai
           sudo -E ntpdate ntp.ubuntu.com 0.pool.ntp.org || true
           sudo -E timedatectl set-ntp true
-          date -u
-          timedatectl status || true
+          date
           echo "status=success" >> ${GITHUB_OUTPUT}
 
       - name: Create virtual disk for extended storage
@@ -87,15 +91,12 @@ jobs:
         working-directory: /builder
         if: ${{ steps.init.outputs.status == 'success' && !cancelled() }}
         run: |
-         # Determine the OpenWrt source code repository
-         REPO_NAME="openwrt"
-         # Clone the source code repository
+          REPO_NAME="openwrt"
           git clone -q --single-branch --depth=1 --branch=${REPO_BRANCH} ${REPO_URL} openwrt
           ln -sf /builder/openwrt ${{ github.workspace }}/openwrt
           ln -sf /builder/openwrt /home/runner/work/_actions/ophub/amlogic-s9xxx-openwrt/main/openwrt
 
-          # Export build metadata
-          echo "build_tag=${REPO_NAME}-${REPO_BRANCH}-$(date +"%Y.%m")" >> ${GITHUB_ENV}
+          echo "build_tag=${REPO_NAME}-${REPO_BRANCH}-$(date +"%Y.%m.%d-%H%M%S")" >> ${GITHUB_ENV}
           echo -e "REPO_URL: [ ${REPO_URL} ]\nREPO_BRANCH: [ ${REPO_BRANCH} ]\nREPO_NAME: [ ${REPO_NAME} ]"
           df -hT ${PWD}
           echo "REPO_URL=${REPO_URL}" >> ${GITHUB_ENV}
@@ -118,8 +119,7 @@ jobs:
       - name: Load custom configuration
         run: |
           [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
-          chmod +x ${DIY_P2_SH}
-          chmod +x ${DIY_P3_SH}
+          chmod +x ${DIY_P2_SH} ${DIY_P3_SH}
           cd openwrt/
           ${{ github.workspace }}/${DIY_P2_SH}
           ${{ github.workspace }}/${DIY_P3_SH} "${{ inputs.openwrt_ip }}" "${{ inputs.use_ccache }}"
@@ -127,7 +127,7 @@ jobs:
       - name: SSH connect to Actions
         uses: P3TERX/ssh2actions@main
         if: github.event.inputs.ssh == 'true'
-      
+
       - name: Download package
         id: package
         run: |
@@ -140,15 +140,12 @@ jobs:
       - name: Get OpenWrt source commit hash
         id: openwrthash
         run: |
-          # Get the latest source hash from the kernel repository
           repo_path="$(echo "${{ env.REPO_URL }}" | awk -F"github.com/" '{print $2}')"
           api_url="https://api.github.com/repos/${repo_path}/git/ref/heads/${{ env.REPO_BRANCH }}"
           source_hash=$(curl -fsSL -m 20 \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              ${api_url} |
-              jq -r '.object.sha'
-          )
+              ${api_url} | jq -r '.object.sha')
           [[ -z "${source_hash}" || "${source_hash}" == "null" ]] && source_hash="${{ github.sha }}"
           echo "source_hash=${source_hash}" >> ${GITHUB_ENV}
           echo "status=success" >> ${GITHUB_OUTPUT}
@@ -170,23 +167,20 @@ jobs:
 
           echo -e "ccache statistics:"
           ccache -s 2>/dev/null
-          echo -e "ccache directory size:"
           du -sh $(pwd)/.ccache 2>/dev/null || echo "No ccache directory found."
 
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Clean up build files and reclaim disk space
+      - name: Clean up build files
         id: clean
         if: ${{ steps.compile.outputs.status == 'success' && !cancelled() }}
         run: |
-          # Clean up build artifacts and reclaim disk space
           cd openwrt/
           [[ -d "output" ]] || mkdir output
           cp -f bin/targets/*/*/*rootfs.tar.gz output/
           cp -f .config output/config
           ls -A | grep -vE '^(output|\.ccache)$' | xargs rm -rf || true
 
-          # Export build metadata
           df -hT ${PWD}
           echo "status=success" >> ${GITHUB_OUTPUT}
 
@@ -197,7 +191,6 @@ jobs:
           tag: ${{ env.build_tag }}
           artifacts: openwrt/output/*
           allowUpdates: true
-          removeArtifacts: false
           replacesArtifacts: true
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -244,7 +237,6 @@ jobs:
           tag: ${{ env.build_tag }}
           artifacts: upload_firmware/*
           allowUpdates: true
-          removeArtifacts: false
           replacesArtifacts: true
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -256,9 +248,22 @@ jobs:
             - Default WIFI name: `OpenWrt`
             - Default WIFI password: `none`
             ### Install to EMMC
-            - Login to OpenWrt → `System` → `Amlogic Service` → `Install OpenWrt`
-            ### OpenWrt source code
+            - Login to OpenWrt → System → Amlogic Service → Install OpenWrt
+            ### OpenWrt Source
             - [${{ env.REPO_NAME }}](${{ env.REPO_URL }}/tree/${{ env.REPO_BRANCH }})
-            ### Applicable Platform
-            - 🐧 `arm64`
-            - 🐋 Docker image: https://hub.docker.com/u/ophub
+            ### Platform
+            - arm64
+
+      - name: Delete old releases (keep latest 3)
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        with:
+          keep_latest: 3
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old workflow runs (keep latest 3)
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 3
