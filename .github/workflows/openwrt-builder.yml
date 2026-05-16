@@ -119,7 +119,8 @@ jobs:
       - name: Load custom configuration
         run: |
           [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
-          chmod +x ${DIY_P2_SH} ${DIY_P3_SH}
+          chmod +x ${DIY_P2_SH} 
+          chmod +x ${DIY_P3_SH}
           cd openwrt/
           ${{ github.workspace }}/${DIY_P2_SH}
           ${{ github.workspace }}/${DIY_P3_SH} "${{ inputs.openwrt_ip }}" "${{ inputs.use_ccache }}"
