@@ -42,8 +42,6 @@ rm -rf package/feeds/packages/zabbix
 rm -rf package/feeds/packages/radicale3
 
 # ========== 添加luci-app-turboacc插件 ==========
-curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh
-sed -i 's|rm -rf "$file_path"|# 保留原有补丁，不删除|g' add_turboacc.sh
-bash add_turboacc.sh
+curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh --no-netfilter
 
 echo "\n✅ 所有插件下载完成！已全部放入 package 目录"
