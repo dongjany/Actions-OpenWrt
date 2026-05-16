@@ -26,7 +26,7 @@ git_clone_move() {
 git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
 git clone https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 git clone https://github.com/sbwml/luci-app-ramfree.git package/luci-app-ramfree
-git clone https://github.com/MomoFlora/default-settings package/default-settings
+git clone https://github.com/dongjany/default-settings package/default-settings
 
 # ========== 一次克隆 → 移动多个目录 ==========
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-app-xunlei luci-app-fan v2dat mosdns luci-app-mosdns luci-app-broadbandacc
