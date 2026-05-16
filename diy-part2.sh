@@ -32,14 +32,7 @@ git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-a
 git_clone_move master https://github.com/coolsnowwolf/lede package/lean/default-settings package/lean/automount package/lean/autocore package/lean/ddns-scripts_aliyun package/lean/ddns-scripts_dnspod
 
 # ========== 删除错误插件 ==========
-rm -rf package/public/autosamba
-rm -rf package/feeds/packages/onionshare-cli
-rm -rf package/feeds/packages/python-pika
-rm -rf package/feeds/packages/python-ubus
-rm -rf package/wwan/qmodem
 rm -rf package/network/utils/fullconenat-nft
-rm -rf package/feeds/packages/zabbix
-rm -rf package/feeds/packages/radicale3
 
 # ========== 添加luci-app-turboacc插件 ==========
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh --no-netfilter
