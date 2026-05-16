@@ -26,10 +26,11 @@ git_clone_move() {
 git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
 git clone https://github.com/ophub/luci-app-amlogic.git package/luci-app-amlogic
 git clone https://github.com/sbwml/luci-app-ramfree.git package/luci-app-ramfree
+git clone https://github.com/MomoFlora/default-settings package/luci-app-ramfree
 
 # ========== 一次克隆 → 移动多个目录 ==========
 git_clone_move main https://github.com/kiddin9/op-packages luci-app-demon luci-app-xunlei luci-app-fan v2dat mosdns luci-app-mosdns luci-app-broadbandacc
-git_clone_move master https://github.com/coolsnowwolf/lede package/lean/default-settings package/lean/automount package/lean/autocore package/lean/ddns-scripts_aliyun package/lean/ddns-scripts_dnspod
+git_clone_move master https://github.com/coolsnowwolf/lede package/lean/automount package/lean/autocore package/lean/ddns-scripts_aliyun package/lean/ddns-scripts_dnspod
 
 # ========== 删除错误插件 ==========
 rm -rf package/network/utils/fullconenat-nft
