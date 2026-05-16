@@ -33,6 +33,23 @@ git_clone_move main https://github.com/Lienol/openwrt-package other/lean/ddns-sc
 git_clone_move openwrt-24.10 https://github.com/immortalwrt/immortalwrt package/emortal/default-settings package/emortal/automount package/emortal/autocore
 
 # ========== 添加luci-app-turboacc插件 ==========
-curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh
+
+# 👇 核心修复：让脚本 只替换 补丁内容不同的文件
+sed -i 's|rm -rf "$file_path"|# 保留原有补丁，不删除|g' add_turboacc.sh
+
+sed -i 's|cp -f "$TMPDIR/package/hack-$kernel_version/$patch_952" "$patch_952_path"|
+if [ -f "$patch_952_path" ]; then
+    diff "$patch_952_path" "$TMPDIR/package/hack-$kernel_version/$patch_952" > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        cp -f "$TMPDIR/package/hack-$kernel_version/$patch_952" "$patch_952_path"
+    fi
+else
+    cp -f "$TMPDIR/package/hack-$kernel_version/$patch_952" "$patch_952_path"
+fi
+|g' add_turboacc.sh
+
+# 执行
+bash add_turboacc.sh
 
 echo "\n✅ 所有插件下载完成！已全部放入 package 目录"
